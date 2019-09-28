@@ -1,0 +1,26 @@
+{
+  "name": "vod-downloader",
+  "version": "1.0.0",
+  "description": "",
+  "main": "download.js",
+  "dependencies": {
+    "m3u8": "0.0.8",
+    "m3u8stream": "^0.6.2",
+    "miniget": "^1.5.3",
+    "string-to-stream": "^3.0.1"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oeed/vod-downloader.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/oeed/vod-downloader/issues"
+  },
+  "homepage": "https://github.com/oeed/vod-downloader#readme"
+}
