@@ -3,7 +3,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const m3u8stream = require('m3u8stream')
 const miniget = require("miniget")
-const http = require("http")
+const https = require("https")
 const SocksProxyAgent = require('socks-proxy-agent');
 const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
@@ -28,8 +28,7 @@ const determineRenditionKey = (url) => new Promise(resolve => {
     const segmentCount = (videoRendition.match(/#EXTINF:/g)||[]).length
     const [_, keyUrl, ivStr] = videoRendition.substr(0, 1000).match(/URI="([^\"]+)",IV=0x([0-9a-fA-F]+)/)
     const iv = Buffer.from(ivStr, "hex")
-    const url = new URL(keyUrl)
-    http.get({ host: PROXY_HOST, port: PROXY_PORT, path: keyUrl, headers: { host: url.host } }, res => {
+    https.get(proxyOptions.transform({ href: keyUrl, headers: {} }), res => {
       const data = [];
       res.on('data', function(chunk) {
         data.push(chunk);
