@@ -19,13 +19,13 @@ fetch("https://10play.com.au/have-you-been-paying-attention").then(response => r
       console.log("New episode!", show.video.title, latestVideo)
       const tempPath = await download(latestVideo)
       const [_, seasonNo, episodeNo] = show.video.title.match(/S.*?(\d+) E.*?(\d+)/)
-      const fileName = `Have You Been Paying Attention! - ${ DateTime.fromISO(show.video.airDate).toISODate() } - Episode ${ episodeNo }`
+      const fileName = `Have You Been Paying Attention! - ${ DateTime.fromISO(show.video.airDate).toISODate() } - Episode ${ episodeNo }.mkv`
       const path = `/media/plex/tv/Have You Been Paying Attention!/Season ${ seasonNo }/${ fileName }`
       mv(tempPath, path, err => {
         if (err) { throw err }
         existingEpisodes.hybpa[latestVideo] = true
         saveEpisodes()
-        console.log("Move episode to", `/media/plex/tv/Have You Been Paying Attention!/${ fileName }`)
+        console.log("Moved episode to", `/media/plex/tv/Have You Been Paying Attention!/${ fileName }`)
       })
     }
     else {
