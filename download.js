@@ -4,25 +4,20 @@ const fs = require('fs');
 const m3u8stream = require('m3u8stream')
 const miniget = require("miniget")
 const http = require("http")
-const { URL } = require('url');
+const SocksProxyAgent = require('socks-proxy-agent');
+const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const stringStream = require('string-to-stream')
 
-const PROXY_HOST = '127.0.0.1'
-const PROXY_PORT = 8887
+const proxy = process.env.PROXY || 'socks://127.0.0.1:2001';
+const agent = new SocksProxyAgent(proxy)
 
 const proxyOptions = {
   transform: (parsed) => {
-    delete parsed.hostname
-    parsed.host = PROXY_HOST
-    parsed.port = PROXY_PORT
-    parsed.path = parsed.href
-    parsed.protocol = "http:"
-    if (parsed.headers) {
-      const url = new URL(parsed.href)
-      parsed.headers.host = url.host
-    }
-    return parsed
+    const opts = parseURL(parsed.href);
+    opts.agent = agent
+    opts.headers = parsed.headers
+    return opts
   }
 }
 
