@@ -9,7 +9,6 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const path = require("path")
 const stringStream = require('string-to-stream')
-const { spawn, exec } = require('child_process');
 
 const connectProxy = () => new Promise((resolve, reject) => {
   let hasResolved = false
