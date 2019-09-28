@@ -4,12 +4,17 @@ const download = require("./download")
 const { DateTime } = require("luxon")
 const path = require("path")
 const mv = require('mv')
+const { spawn, exec } = require('child_process');
 
 const EPISODES_PATH = path.join(__dirname, "episodes.json")
 const existingEpisodes = fs.existsSync(EPISODES_PATH) ? JSON.parse(fs.readFileSync(EPISODES_PATH, "utf-8")) : {}
 const saveEpisodes = () => fs.writeFileSync(EPISODES_PATH, JSON.stringify(existingEpisodes))
 
 existingEpisodes.hybpa = existingEpisodes.hybpa || {}
+
+process.on ('exit', code => {
+  exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
+});
 
 fetch("https://10play.com.au/have-you-been-paying-attention").then(response => response.text()).then(async page => {
   const pageData = page.match(/<script>const\s+showPageData\s*=\s*(\{.+\})\;<\/script>/)
@@ -27,6 +32,7 @@ fetch("https://10play.com.au/have-you-been-paying-attention").then(response => r
         existingEpisodes.hybpa[latestVideo] = true
         saveEpisodes()
         console.log("Moved episode to", `/media/plex/tv/Have You Been Paying Attention!/${ fileName }`)
+        exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
       })
     }
     else {

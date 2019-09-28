@@ -9,10 +9,10 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const path = require("path")
 const stringStream = require('string-to-stream')
+const { spawn, exec } = require('child_process');
 
 const connectProxy = () => new Promise((resolve, reject) => {
   let hasResolved = false
-  const { spawn } = require('child_process');
   console.log("Connecting proxy...")
   const proxyProcess = spawn("sh", [path.join(__dirname, "proxy.sh")])
   proxyProcess.stdout.setEncoding('utf8');
@@ -34,10 +34,11 @@ const connectProxy = () => new Promise((resolve, reject) => {
 
   setTimeout(() => {
     if (!hasResolved) {
+      exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
       reject("Proxy timeout")
       hasResolved = true
     }
-  }, 60000)
+  }, 120000)
 
 })
 
