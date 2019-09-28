@@ -15,8 +15,12 @@ const connectProxy = () => new Promise((resolve, reject) => {
   console.log("Connecting proxy...")
   const proxyProcess = spawn("sh", ["proxy.sh"])
   proxyProcess.stdout.setEncoding('utf8');
+  proxyProcess.stderr.setEncoding('utf8');
 
   const onData = data => {
+    if (!hasResolved) {
+      console.log(data)
+    }
     if (!hasResolved && data.indexOf("Local forwarding listening on 127.0.0.1 port 2001") !== -1) {
       console.log("Proxy connected")
       hasResolved = true
