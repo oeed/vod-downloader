@@ -7,13 +7,14 @@ const https = require("https")
 const SocksProxyAgent = require('socks-proxy-agent');
 const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
+const path = require("path")
 const stringStream = require('string-to-stream')
 
 const connectProxy = () => new Promise((resolve, reject) => {
   let hasResolved = false
   const { spawn } = require('child_process');
   console.log("Connecting proxy...")
-  const proxyProcess = spawn("sh", ["proxy.sh"])
+  const proxyProcess = spawn("sh", [path.join(__dirname, "proxy.sh")])
   proxyProcess.stdout.setEncoding('utf8');
   proxyProcess.stderr.setEncoding('utf8');
 
@@ -131,14 +132,14 @@ module.exports = (episodeID) => new Promise(async resolvePath => {
           }
         }
 
-        if (!fs.existsSync("output")){
-          fs.mkdirSync("output");
+        if (!fs.existsSync(path.join(__dirname, "output"))){
+          fs.mkdirSync(path.join(__dirname, "output"));
         }
 
         console.log("Get audio...")
-        const AUDIO_PATH = `output/${ episodeID }.m4a`
-        const VIDEO_PATH = `output/${ episodeID }.mp4`
-        const OUTPUT_PATH = `output/${ episodeID }.mkv`
+        const AUDIO_PATH = path.join(__dirname, `output/${ episodeID }.m4a`)
+        const VIDEO_PATH = path.join(__dirname, `output/${ episodeID }.mp4`)
+        const OUTPUT_PATH = path.join(__dirname, `output/${ episodeID }.mkv`)
         await downloadStream(audio.attributes.attributes.uri, AUDIO_PATH)
         console.log("Get video...")
         await downloadStream(video.properties.uri, VIDEO_PATH)

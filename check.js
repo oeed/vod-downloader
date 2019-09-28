@@ -2,9 +2,10 @@ const fetch = require("node-fetch")
 const fs = require("fs")
 const download = require("./download")
 const { DateTime } = require("luxon")
+const path = require("path")
 const mv = require('mv')
 
-const EPISODES_PATH = "episodes.json"
+const EPISODES_PATH = path.join(__dirname, "episodes.json")
 const existingEpisodes = fs.existsSync(EPISODES_PATH) ? JSON.parse(fs.readFileSync(EPISODES_PATH, "utf-8")) : {}
 const saveEpisodes = () => fs.writeFileSync(EPISODES_PATH, JSON.stringify(existingEpisodes))
 
