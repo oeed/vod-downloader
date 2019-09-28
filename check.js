@@ -2,6 +2,7 @@ const fetch = require("node-fetch")
 const fs = require("fs")
 const download = require("./download")
 const { DateTime } = require("luxon")
+const mv = require('mv')
 
 const EPISODES_PATH = "episodes.json"
 const existingEpisodes = fs.existsSync(EPISODES_PATH) ? JSON.parse(fs.readFileSync(EPISODES_PATH, "utf-8")) : {}
@@ -19,11 +20,13 @@ fetch("https://10play.com.au/have-you-been-paying-attention").then(response => r
       const tempPath = await download(latestVideo)
       const [_, seasonNo, episodeNo] = show.video.title.match(/S.*?(\d+) E.*?(\d+)/)
       const fileName = `Have You Been Paying Attention! - ${ DateTime.fromISO(show.video.airDate).toISODate() } - Episode ${ episodeNo }`
-      const path = `/media/plex/Have You Been Paying Attention!/Season ${ seasonNo }/${ fileName }`
-      fs.rename(tempPath, path)
-      existingEpisodes.hybpa[latestVideo] = true
-      saveEpisodes()
-      console.log("Move episode to", `/media/plex/tv/Have You Been Paying Attention!/${ fileName }`)
+      const path = `/media/plex/tv/Have You Been Paying Attention!/Season ${ seasonNo }/${ fileName }`
+      mv(tempPath, path, err => {
+        if (err) { throw err }
+        existingEpisodes.hybpa[latestVideo] = true
+        saveEpisodes()
+        console.log("Move episode to", `/media/plex/tv/Have You Been Paying Attention!/${ fileName }`)
+      })
     }
     else {
       console.log("No new episode, latest: ", show.video.title)
