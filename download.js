@@ -58,18 +58,12 @@ module.exports = (episodeID) => new Promise(resolvePath => {
     })
 
     const file = fs.createWriteStream(fileName)
-    let i = 4
     stream.on("progress", (data) => {
       console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`, data)
       let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
       let decrypted = decipher.update(Buffer.concat(chunks));
       chunks = []
       file.write(decrypted)
-      i --
-      if (i <= 0) {
-        file.end()
-        stream.end()
-      }
     })
     stream.on("end", () => {
       file.end()
