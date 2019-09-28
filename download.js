@@ -1,4 +1,4 @@
-const { exec } = require('child_process');
+const { exec, spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const m3u8stream = require('m3u8stream')
@@ -9,7 +9,35 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const stringStream = require('string-to-stream')
 
-module.exports = (episodeID) => new Promise(resolvePath => {
+const connectProxy = () => new Promise((resolve, reject) => {
+  let hasResolved = false
+  const { spawn } = require('child_process');
+  console.log("Connecting proxy...")
+  const proxyProcess = spawn("sh", ["proxy.sh"])
+  proxyProcess.stdout.setEncoding('utf8');
+
+  const onData = data => {
+    if (!hasResolved && data.indexOf("Local forwarding listening on 127.0.0.1 port 2001") !== -1) {
+      console.log("Proxy connected")
+      hasResolved = true
+      resolve(proxyProcess)
+    }
+  }
+  proxyProcess.stdout.on('data', onData)
+  proxyProcess.stderr.on('data', onData)
+  
+
+  setTimeout(() => {
+    if (!hasResolved) {
+      reject("Proxy timeout")
+      hasResolved = true
+    }
+  }, 60000)
+
+})
+
+module.exports = (episodeID) => new Promise(async resolvePath => {
+  const proxyProcess = await connectProxy()
   const proxy = process.env.PROXY || 'socks://127.0.0.1:2001';
   const agent = new SocksProxyAgent(proxy)
 
@@ -33,7 +61,7 @@ module.exports = (episodeID) => new Promise(resolvePath => {
         const data = [];
         res.on('data', function(chunk) {
           data.push(chunk);
-        }).on('end', function() {
+        }).on('end', function()  {
             const key = Buffer.concat(data);
             resolve({ key, iv, segmentCount })
         });
@@ -59,7 +87,7 @@ module.exports = (episodeID) => new Promise(resolvePath => {
 
     const file = fs.createWriteStream(fileName)
     stream.on("progress", (data) => {
-      console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`, data)
+      console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`)
       let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
       let decrypted = decipher.update(Buffer.concat(chunks));
       chunks = []
@@ -110,6 +138,7 @@ module.exports = (episodeID) => new Promise(resolvePath => {
         await downloadStream(audio.attributes.attributes.uri, AUDIO_PATH)
         console.log("Get video...")
         await downloadStream(video.properties.uri, VIDEO_PATH)
+        proxyProcess.kill()
         
         console.log("Merging audio and video...")
         if (fs.existsSync(OUTPUT_PATH)) {
