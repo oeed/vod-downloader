@@ -144,6 +144,7 @@ module.exports = (episodeID) => new Promise(async resolvePath => {
         console.log("Get video...")
         await downloadStream(video.properties.uri, VIDEO_PATH)
         proxyProcess.kill()
+        exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
         
         console.log("Merging audio and video...")
         if (fs.existsSync(OUTPUT_PATH)) {

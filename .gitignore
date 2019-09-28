@@ -2,3 +2,4 @@ node_modules
 output
 episodes.json
 proxy.sh
+stop-proxy.sh
