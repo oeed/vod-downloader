@@ -9,113 +9,125 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const stringStream = require('string-to-stream')
 
-const proxy = process.env.PROXY || 'socks://127.0.0.1:2001';
-const agent = new SocksProxyAgent(proxy)
+module.exports = (episodeID) => new Promise(resolvePath => {
+  const proxy = process.env.PROXY || 'socks://127.0.0.1:2001';
+  const agent = new SocksProxyAgent(proxy)
 
-const proxyOptions = {
-  transform: (parsed) => {
-    const opts = parseURL(parsed.href);
-    opts.agent = agent
-    opts.headers = parsed.headers
-    return opts
+  const proxyOptions = {
+    transform: (parsed) => {
+      const opts = parseURL(parsed.href);
+      opts.agent = agent
+      opts.headers = parsed.headers
+      return opts
+    }
   }
-}
 
-const get = (url, headers, callback) => miniget(url, Object.assign({ headers }, proxyOptions), callback)
+  const get = (url, headers, callback) => miniget(url, Object.assign({ headers }, proxyOptions), callback)
 
-const determineRenditionKey = (url) => new Promise(resolve => {
-  get(url, {},(err, res, videoRendition) => {
-    const segmentCount = (videoRendition.match(/#EXTINF:/g)||[]).length
-    const [_, keyUrl, ivStr] = videoRendition.substr(0, 1000).match(/URI="([^\"]+)",IV=0x([0-9a-fA-F]+)/)
-    const iv = Buffer.from(ivStr, "hex")
-    https.get(proxyOptions.transform({ href: keyUrl, headers: {} }), res => {
-      const data = [];
-      res.on('data', function(chunk) {
-        data.push(chunk);
-      }).on('end', function() {
-          const key = Buffer.concat(data);
-          resolve({ key, iv, segmentCount })
-      });
+  const determineRenditionKey = (url) => new Promise(resolve => {
+    get(url, {},(err, res, videoRendition) => {
+      const segmentCount = (videoRendition.match(/#EXTINF:/g)||[]).length
+      const [_, keyUrl, ivStr] = videoRendition.substr(0, 1000).match(/URI="([^\"]+)",IV=0x([0-9a-fA-F]+)/)
+      const iv = Buffer.from(ivStr, "hex")
+      https.get(proxyOptions.transform({ href: keyUrl, headers: {} }), res => {
+        const data = [];
+        res.on('data', function(chunk) {
+          data.push(chunk);
+        }).on('end', function() {
+            const key = Buffer.concat(data);
+            resolve({ key, iv, segmentCount })
+        });
+      })
     })
   })
-})
 
-const downloadStream = (url, fileName) => new Promise(async (resolve, reject) => {
-  const { key, iv, segmentCount } = await determineRenditionKey(url)
-  const stream = m3u8stream(url, { parser: "m3u8", requestOptions: Object.assign({ headers: {} }, proxyOptions) })
+  const downloadStream = (url, fileName) => new Promise(async (resolve, reject) => {
+    const { key, iv, segmentCount } = await determineRenditionKey(url)
+    const stream = m3u8stream(url, { parser: "m3u8", requestOptions: Object.assign({ headers: {} }, proxyOptions) })
 
-  stream.on("error", (err) => {
-    reject(err)
-    stream.end()
-  })
-  let chunks = []
-  stream.on('readable', () => {
-    const buffer = stream.read()
-    if (buffer !== null) {
-      chunks.push(buffer)
-    }
-  })
-
-  let i = 4
-  const file = fs.createWriteStream(fileName)
-  stream.on("progress", (data) => {
-    i --
-    if (i <= 0) {
-      file.end()
+    stream.on("error", (err) => {
+      reject(err)
       stream.end()
-      return
-    }
-    console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`, data)
-    let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
-    let decrypted = decipher.update(Buffer.concat(chunks));
-    chunks = []
-    file.write(decrypted)
-  })
-  stream.on("end", () => {
-    file.end()
-    resolve()
-  })
-})
+    })
+    let chunks = []
+    stream.on('readable', () => {
+      const buffer = stream.read()
+      if (buffer !== null) {
+        chunks.push(buffer)
+      }
+    })
 
-console.log("Get video details...")
-get("https://edge.api.brightcove.com/playback/v1/accounts/2199827728001/videos/6088675631001", { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" }, (err, res, videoBody) => {
-  if (err) { throw new Error(err) }
-  const video = JSON.parse(videoBody)
-  const source = video.sources[0]
-  console.log("Get manifest...")
-  get(source.src, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" }, (err, res, manifest) => {
+    const file = fs.createWriteStream(fileName)
+    let i = 4
+    stream.on("progress", (data) => {
+      console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`, data)
+      let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+      let decrypted = decipher.update(Buffer.concat(chunks));
+      chunks = []
+      file.write(decrypted)
+      i --
+      if (i <= 0) {
+        file.end()
+        stream.end()
+      }
+    })
+    stream.on("end", () => {
+      file.end()
+      resolve()
+    })
+  })
+
+  console.log("Get video details...")
+  get(`https://edge.api.brightcove.com/playback/v1/accounts/2199827728001/videos/${ episodeID }`, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" }, (err, res, videoBody) => {
     if (err) { throw new Error(err) }
-    var parser = m3u8.createStream();
-    stringStream(manifest).pipe(parser)
-    parser.on('m3u', async function(m3u) {
-      // pick the best quality video
-      let video
-      for (const item of m3u.items.StreamItem) {
-        if (!video || item.attributes.attributes.bandwidth > video.attributes.attributes.bandwidth) {
-          video = item
+    const video = JSON.parse(videoBody)
+    const source = video.sources[0]
+    console.log("Get manifest...")
+    get(source.src, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" }, (err, res, manifest) => {
+      if (err) { throw new Error(err) }
+      var parser = m3u8.createStream();
+      stringStream(manifest).pipe(parser)
+      parser.on('m3u', async function(m3u) {
+        // pick the best quality video
+        let video
+        for (const item of m3u.items.StreamItem) {
+          if (!video || item.attributes.attributes.bandwidth > video.attributes.attributes.bandwidth) {
+            video = item
+          }
         }
-      }
 
-      // then get the corresponding audio
-      let audio
-      for (const item of m3u.items.MediaItem) {
-        if (item.attributes.attributes["group-id"] == video.attributes.attributes.audio) {
-          audio = item
-          break
+        // then get the corresponding audio
+        let audio
+        for (const item of m3u.items.MediaItem) {
+          if (item.attributes.attributes["group-id"] == video.attributes.attributes.audio) {
+            audio = item
+            break
+          }
         }
-      }
 
-      if (!fs.existsSync("output")){
-        fs.mkdirSync("output");
-      }
+        if (!fs.existsSync("output")){
+          fs.mkdirSync("output");
+        }
 
-      console.log("Get audio...")
-      await downloadStream(audio.attributes.attributes.uri, "output/audio.m4a")
-      console.log("Get video...")
-      await downloadStream(video.properties.uri, "output/video.mp4")
-      
-      console.log("Merging audio and video...")
-      exec('ffmpeg -i output/video.mp4 -i output/audio.m4a -c copy output/output.mkv');
-    });
+        console.log("Get audio...")
+        const AUDIO_PATH = `output/${ episodeID }.m4a`
+        const VIDEO_PATH = `output/${ episodeID }.mp4`
+        const OUTPUT_PATH = `output/${ episodeID }.mkv`
+        await downloadStream(audio.attributes.attributes.uri, AUDIO_PATH)
+        console.log("Get video...")
+        await downloadStream(video.properties.uri, VIDEO_PATH)
+        
+        console.log("Merging audio and video...")
+        if (fs.existsSync(OUTPUT_PATH)) {
+          fs.unlinkSync(OUTPUT_PATH)
+        }
+        exec(`ffmpeg -i ${ VIDEO_PATH } -i ${ AUDIO_PATH } -c copy ${ OUTPUT_PATH }`, () => {
+          console.log("done")
+          fs.unlinkSync(AUDIO_PATH)
+          fs.unlinkSync(VIDEO_PATH)
+          resolvePath(OUTPUT_PATH)
+        });
+      });
+    })
   })
 })

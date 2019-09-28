@@ -4,9 +4,12 @@
   "description": "",
   "main": "download.js",
   "dependencies": {
+    "install": "^0.13.0",
+    "luxon": "^1.19.3",
     "m3u8": "0.0.8",
     "m3u8stream": "^0.6.2",
     "miniget": "^1.5.3",
+    "node-fetch": "^2.6.0",
     "socks-proxy-agent": "^4.0.2",
     "string-to-stream": "^3.0.1"
   },
