@@ -1,4 +1,5 @@
 const { exec, spawn } = require('child_process');
+const path = require("path")
 
 const stopProxy = () => exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
 
