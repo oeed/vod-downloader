@@ -1,3 +1,5 @@
+const { exec, spawn } = require('child_process');
+
 const stopProxy = () => exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
 
 let isConnected = false
