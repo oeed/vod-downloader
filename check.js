@@ -5,6 +5,7 @@ const { DateTime } = require("luxon")
 const path = require("path")
 const mv = require('mv')
 const { spawn, exec } = require('child_process');
+const { stopProxy } = require("./proxy")
 
 const EPISODES_PATH = path.join(__dirname, "episodes.json")
 const existingEpisodes = fs.existsSync(EPISODES_PATH) ? JSON.parse(fs.readFileSync(EPISODES_PATH, "utf-8")) : {}
@@ -12,9 +13,7 @@ const saveEpisodes = () => fs.writeFileSync(EPISODES_PATH, JSON.stringify(existi
 
 existingEpisodes.hybpa = existingEpisodes.hybpa || {}
 
-process.on ('exit', code => {
-  exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
-});
+process.on('exit', () => stopProxy());
 
 async function checkShow(id, url, folderName, formatFileName) {
   console.log("Checking show:", id)
@@ -35,7 +34,7 @@ async function checkShow(id, url, folderName, formatFileName) {
           existingEpisodes[id][latestVideo] = true
           saveEpisodes()
           console.log("Moved episode to", `/media/plex/tv/${ folderName }/${ fileName }`)
-          exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
+          stopProxy()
         })
       }
       else {
@@ -46,5 +45,8 @@ async function checkShow(id, url, folderName, formatFileName) {
   
 }
 
-checkShow("hybpa", "https://10play.com.au/have-you-been-paying-attention", "Have You Been Paying Attention!", (video, episodeNo) => `Have You Been Paying Attention! - ${ DateTime.fromISO(video.airDate).toISODate() } - Episode ${ episodeNo }.mkv`)
-checkShow("bachelorette", "https://10play.com.au/the-bachelorette", "The Bachelorette Australia", (video, episodeNo, seasonNo) => `The Bachelorette Australia - ${ seasonNo }x0${ episodeNo } - Episode ${ episodeNo }.mkv`)
+async function check() {
+  await checkShow("hybpa", "https://10play.com.au/have-you-been-paying-attention", "Have You Been Paying Attention!", (video, episodeNo) => `Have You Been Paying Attention! - ${ DateTime.fromISO(video.airDate).toISODate() } - Episode ${ episodeNo }.mkv`)
+  await checkShow("bachelorette", "https://10play.com.au/the-bachelorette", "The Bachelorette Australia", (video, episodeNo, seasonNo) => `The Bachelorette Australia - ${ seasonNo }x0${ episodeNo } - Episode ${ episodeNo }.mkv`)
+}
+check()

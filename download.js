@@ -9,37 +9,8 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const path = require("path")
 const stringStream = require('string-to-stream')
+const { connectProxy, stopProxy } = require("./proxy")
 
-const connectProxy = () => new Promise((resolve, reject) => {
-  let hasResolved = false
-  console.log("Connecting proxy...")
-  const proxyProcess = spawn("sh", [path.join(__dirname, "proxy.sh")])
-  proxyProcess.stdout.setEncoding('utf8');
-  proxyProcess.stderr.setEncoding('utf8');
-
-  const onData = data => {
-    if (!hasResolved) {
-      console.log(data)
-    }
-    if (!hasResolved && data.indexOf("Local forwarding listening on 127.0.0.1 port 2001") !== -1) {
-      console.log("Proxy connected")
-      hasResolved = true
-      resolve(proxyProcess)
-    }
-  }
-  proxyProcess.stdout.on('data', onData)
-  proxyProcess.stderr.on('data', onData)
-  
-
-  setTimeout(() => {
-    if (!hasResolved) {
-      exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
-      reject("Proxy timeout")
-      hasResolved = true
-    }
-  }, 120000)
-
-})
 
 module.exports = (episodeID) => new Promise(async resolvePath => {
   const proxyProcess = await connectProxy()
@@ -144,7 +115,7 @@ module.exports = (episodeID) => new Promise(async resolvePath => {
         console.log("Get video...")
         await downloadStream(video.properties.uri, VIDEO_PATH)
         proxyProcess.kill()
-        exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
+        stopProxy()
         
         console.log("Merging audio and video...")
         if (fs.existsSync(OUTPUT_PATH)) {
