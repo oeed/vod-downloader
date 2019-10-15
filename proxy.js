@@ -1,4 +1,4 @@
-export const stopProxy = () => exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
+const stopProxy = () => exec(`sh ${ path.join(__dirname, "stop-proxy.sh") }`)
 
 let isConnected = false
 const createConnection = () => new Promise((resolve, reject) => {
@@ -34,7 +34,7 @@ const createConnection = () => new Promise((resolve, reject) => {
 })
 
 let connectResolver
-export const connectProxy = () => {
+const connectProxy = () => {
   if (isConnected) {
     return Promise.resolve()
   }
@@ -45,4 +45,9 @@ export const connectProxy = () => {
     connectResolver = createConnection()
     return connectResolver
   }
+}
+
+module.exports = {
+  stopProxy,
+  connectProxy
 }
