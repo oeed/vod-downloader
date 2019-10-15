@@ -9,7 +9,7 @@ const { URL, parse: parseURL } = require('url');
 const m3u8 = require('m3u8');
 const path = require("path")
 const stringStream = require('string-to-stream')
-const { connectProxy, stopProxy } = require("./proxy")
+const { connectProxy } = require("./proxy")
 
 
 module.exports = (episodeID) => new Promise(async resolvePath => {
@@ -115,7 +115,6 @@ module.exports = (episodeID) => new Promise(async resolvePath => {
         console.log("Get video...")
         await downloadStream(video.properties.uri, VIDEO_PATH)
         proxyProcess.kill()
-        stopProxy()
         
         console.log("Merging audio and video...")
         if (fs.existsSync(OUTPUT_PATH)) {

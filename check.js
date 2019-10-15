@@ -34,7 +34,6 @@ async function checkShow(id, url, folderName, formatFileName) {
           existingEpisodes[id][latestVideo] = true
           saveEpisodes()
           console.log("Moved episode to", `/media/plex/tv/${ folderName }/${ fileName }`)
-          stopProxy()
         })
       }
       else {
@@ -46,7 +45,10 @@ async function checkShow(id, url, folderName, formatFileName) {
 }
 
 async function check() {
-  await checkShow("hybpa", "https://10play.com.au/have-you-been-paying-attention", "Have You Been Paying Attention!", (video, episodeNo) => `Have You Been Paying Attention! - ${ DateTime.fromISO(video.airDate).toISODate() } - Episode ${ episodeNo }.mkv`)
-  await checkShow("bachelorette", "https://10play.com.au/the-bachelorette", "The Bachelorette Australia", (video, episodeNo, seasonNo) => `The Bachelorette Australia - ${ seasonNo }x0${ episodeNo } - Episode ${ episodeNo }.mkv`)
+  await Promise.all([
+    checkShow("hybpa", "https://10play.com.au/have-you-been-paying-attention", "Have You Been Paying Attention!", (video, episodeNo) => `Have You Been Paying Attention! - ${ DateTime.fromISO(video.airDate).toISODate() } - Episode ${ episodeNo }.mkv`),
+    checkShow("bachelorette", "https://10play.com.au/the-bachelorette", "The Bachelorette Australia", (video, episodeNo, seasonNo) => `The Bachelorette Australia - ${ seasonNo }x0${ episodeNo } - Episode ${ episodeNo }.mkv`)
+  ])
+  stopProxy()
 }
 check()
