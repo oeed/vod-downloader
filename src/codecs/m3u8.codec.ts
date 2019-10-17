@@ -1,7 +1,6 @@
 import { Codec, CodecHeaders } from "codec.types";
-import * as crypto from 'crypto';
+import EncryptionMethod from "encryption";
 import * as fs from 'fs';
-import * as https from "https";
 import * as m3u8 from 'm3u8';
 import m3u8stream from 'm3u8stream';
 import * as path from "path";
@@ -9,28 +8,10 @@ import { Connection } from "proxy";
 import { Logger } from "show-check";
 import stringStream from 'string-to-stream';
 
-export enum VideoEncryption {
-  renditionKey
-}
-
-const determineRenditionKey = (url: string, { get, options }: Connection) => new Promise<{ key: Buffer, iv: Buffer, segmentCount: number }>(async resolve => {
-  const { body: videoRendition } = await get(url, {})
-  const segmentCount = (videoRendition.match(/#EXTINF:/g)||[]).length
-  const [_, keyUrl, ivStr] = videoRendition.substr(0, 1000).match(/URI="([^\"]+)",IV=0x([0-9a-fA-F]+)/)
-  const iv = Buffer.from(ivStr, "hex")
-  https.get(options.transform({ href: keyUrl, headers: {} }), res => {
-    const data: Buffer[] = [];
-    res.on('data', function(chunk) {
-      data.push(chunk);
-    }).on('end', function()  {
-        const key = Buffer.concat(data);
-        resolve({ key, iv, segmentCount })
-    });
-  })
-})
-
-const downloadStream = (log: Logger, url: string, fileName: string, encryptionMethod: VideoEncryption | undefined, connection: Connection) => new Promise(async (resolve, reject) => {
-  const encryption = encryptionMethod === VideoEncryption.renditionKey ? await determineRenditionKey(url, connection) : undefined
+const downloadStream = (log: Logger, url: string, fileName: string, encryptionMethod: EncryptionMethod | undefined, connection: Connection) => new Promise(async (resolve, reject) => {
+  if (encryptionMethod) {
+    await encryptionMethod.prepareStream(url, connection)
+  }
   const stream = m3u8stream(url, { parser: "m3u8", requestOptions: Object.assign({ headers: {} }, connection.options) })
 
   stream.on("error", (err: Error) => {
@@ -45,22 +26,20 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
   })
 
   const file = fs.createWriteStream(fileName)
-  stream.on("progress", (data: { num: number }) => {
+  stream.on("progress", async (data: { num: number }) => {
     let content: Buffer
-    if (encryption) {
-      const { key, iv, segmentCount } = encryption
-      log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`)
-      let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
-      content = decipher.update(Buffer.concat(chunks));
+    log(`${ fileName }: Segment done: ${ data.num }`)
+    if (encryptionMethod) {
+      content = await encryptionMethod.decryptSegment(Buffer.concat(chunks))
+      
     }
     else {
-      log(`${ fileName }: Segment done: ${ data.num }`)
       content = Buffer.concat(chunks)
     }
     chunks = []
     file.write(content)
 
-    // ;(stream as any).end()
+    ;(stream as any).end()
   })
   stream.on("end", () => {
     file.end()
@@ -70,7 +49,7 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
 
 export const M3U8: Codec = {
 
-  downloadPlaylist: (log: Logger, fileID: string, platlistURL: string, connection: Connection, encryption?: VideoEncryption, headers: CodecHeaders = {}) => new Promise(async resolve => {
+  downloadPlaylist: (log: Logger, fileID: string, platlistURL: string, connection: Connection, encryption?: EncryptionMethod, headers: CodecHeaders = {}) => new Promise(async resolve => {
     const { body: manifest} = await connection.get(platlistURL, headers)
 
     var parser = m3u8.createStream();

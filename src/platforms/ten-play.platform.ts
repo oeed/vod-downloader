@@ -1,4 +1,5 @@
-import { M3U8, VideoEncryption } from "codecs/m3u8.codec";
+import { M3U8 } from "codecs/m3u8.codec";
+import RenditionEncryption from "encryptions/rendition.encryption";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
 import { Platform } from "platform.types";
@@ -22,7 +23,7 @@ export const TenPlay: Platform = {
     
     const video = JSON.parse(videoBody)
     const source: string = video.sources[0].src
-    return M3U8.downloadPlaylist(log, fileID, source, connection, VideoEncryption.renditionKey, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
+    return M3U8.downloadPlaylist(log, fileID, source, connection, new RenditionEncryption(), { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
   },
 
   async checkShow(log, show) {
