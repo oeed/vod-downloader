@@ -3,3 +3,4 @@ output
 episodes.json
 proxy.sh
 stop-proxy.sh
+shows.json

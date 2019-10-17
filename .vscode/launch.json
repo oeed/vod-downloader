@@ -7,8 +7,15 @@
     {
       "type": "node",
       "request": "launch",
-      "name": "Launch Program",
-      "program": "${workspaceFolder}/check.js"
-    }
+      "name": "Launch",
+      "protocol": "inspector",
+      "args": ["${workspaceFolder}/src/check.ts"],
+      "cwd": "${workspaceRoot}",
+      "runtimeArgs": ["-r", "ts-node/register", "-r", "tsconfig-paths/register"],
+      "env": {
+        "TS_NODE_FILES": "true",
+        "MEDIA_PATH": "/Users/olivercooper/Documents/Projects/vod-downloader/test-media/"
+      }
+		},
   ]
 }

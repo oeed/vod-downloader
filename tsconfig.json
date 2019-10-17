@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "esnext",
+    "outDir": "./dist/",
+    "module": "commonjs",
+    "jsx": "react",
+    "allowJs": true,
+    "sourceMap": true,
+    "inlineSources": true,
+    "sourceRoot": "/",
+    "strictNullChecks": true,
+    "noImplicitAny": true,
+    "moduleResolution": "node",
+    "baseUrl": "./src",
+    "emitDecoratorMetadata": true,
+    "allowSyntheticDefaultImports": true,
+    "experimentalDecorators": true,
+    "downlevelIteration": true,
+    "esModuleInterop": true,
+    "paths": {
+      "*": [
+        "../src/*",
+        "../node_modules/*"
+      ],
+      "shared/*": [
+        "../../shared/src/*"
+			]
+    },
+		"typeRoots": ["node_modules/@types", "src/types"]
+  },
+  "externalPaths": {
+    "*": ["node_modules/@types/*", "node_modules/*"]
+  },
+  "exclude": [
+    "node_modules/*"
+  ],
+  "include": [
+    "src/**/*"
+  ]
+}

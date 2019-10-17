@@ -4,6 +4,10 @@
   "description": "",
   "main": "download.js",
   "dependencies": {
+    "@types/luxon": "^1.15.2",
+    "@types/mv": "^2.1.0",
+    "@types/node": "^12.11.1",
+    "@types/node-fetch": "^2.5.2",
     "install": "^0.13.0",
     "luxon": "^1.19.3",
     "m3u8": "0.0.8",
@@ -12,11 +16,14 @@
     "mv": "^2.1.1",
     "node-fetch": "^2.6.0",
     "socks-proxy-agent": "^4.0.2",
-    "string-to-stream": "^3.0.1"
+    "string-to-stream": "^3.0.1",
+    "ts-node": "^8.4.1",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^3.6.4"
   },
   "devDependencies": {},
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "ts-node -r tsconfig-paths/register --files src/check.ts"
   },
   "repository": {
     "type": "git",
