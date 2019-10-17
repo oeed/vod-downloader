@@ -1,4 +1,4 @@
-import { Codec } from "codec.types";
+import { Codec, CodecHeaders } from "codec.types";
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as https from "https";
@@ -6,10 +6,15 @@ import * as m3u8 from 'm3u8';
 import m3u8stream from 'm3u8stream';
 import * as path from "path";
 import { Connection } from "proxy";
+import { Logger } from "show-check";
 import stringStream from 'string-to-stream';
 
+export enum VideoEncryption {
+  renditionKey
+}
+
 const determineRenditionKey = (url: string, { get, options }: Connection) => new Promise<{ key: Buffer, iv: Buffer, segmentCount: number }>(async resolve => {
-  const { body: videoRendition} = await get(url, {})
+  const { body: videoRendition } = await get(url, {})
   const segmentCount = (videoRendition.match(/#EXTINF:/g)||[]).length
   const [_, keyUrl, ivStr] = videoRendition.substr(0, 1000).match(/URI="([^\"]+)",IV=0x([0-9a-fA-F]+)/)
   const iv = Buffer.from(ivStr, "hex")
@@ -24,8 +29,8 @@ const determineRenditionKey = (url: string, { get, options }: Connection) => new
   })
 })
 
-const downloadStream = (url: string, fileName: string, connection: Connection) => new Promise(async (resolve, reject) => {
-  const { key, iv, segmentCount } = await determineRenditionKey(url, connection)
+const downloadStream = (log: Logger, url: string, fileName: string, encryptionMethod: VideoEncryption | undefined, connection: Connection) => new Promise(async (resolve, reject) => {
+  const encryption = encryptionMethod === VideoEncryption.renditionKey ? await determineRenditionKey(url, connection) : undefined
   const stream = m3u8stream(url, { parser: "m3u8", requestOptions: Object.assign({ headers: {} }, connection.options) })
 
   stream.on("error", (err: Error) => {
@@ -41,11 +46,19 @@ const downloadStream = (url: string, fileName: string, connection: Connection) =
 
   const file = fs.createWriteStream(fileName)
   stream.on("progress", (data: { num: number }) => {
-    console.log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`)
-    let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
-    let decrypted = decipher.update(Buffer.concat(chunks));
+    let content: Buffer
+    if (encryption) {
+      const { key, iv, segmentCount } = encryption
+      log(`${ fileName }: Segment done: ${ data.num }/${ segmentCount } ${ (data.num / segmentCount * 100).toFixed(1) }%`)
+      let decipher = crypto.createDecipheriv('aes-128-cbc', key, iv);
+      content = decipher.update(Buffer.concat(chunks));
+    }
+    else {
+      log(`${ fileName }: Segment done: ${ data.num }`)
+      content = Buffer.concat(chunks)
+    }
     chunks = []
-    file.write(decrypted)
+    file.write(content)
 
     ;(stream as any).end()
   })
@@ -57,8 +70,8 @@ const downloadStream = (url: string, fileName: string, connection: Connection) =
 
 export const M3U8: Codec = {
 
-  downloadPlaylist: (fileID: string, platlistURL: string, connection: Connection) => new Promise(async resolve => {
-    const { body: manifest} = await connection.get(platlistURL, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
+  downloadPlaylist: (log: Logger, fileID: string, platlistURL: string, connection: Connection, encryption?: VideoEncryption, headers: CodecHeaders = {}) => new Promise(async resolve => {
+    const { body: manifest} = await connection.get(platlistURL, headers)
 
     var parser = m3u8.createStream();
     stringStream(manifest).pipe(parser)
@@ -72,7 +85,7 @@ export const M3U8: Codec = {
       }
 
       // then get the corresponding audio
-      let audio
+      let audio: any | undefined
       for (const item of m3u.items.MediaItem) {
         if (item.attributes.attributes["group-id"] == video.attributes.attributes.audio) {
           audio = item
@@ -84,18 +97,24 @@ export const M3U8: Codec = {
         fs.mkdirSync(path.join(__dirname, "../../output"));
       }
 
-      console.log("Get audio...")
-      const AUDIO_PATH = path.join(__dirname, `../../output/${ fileID }.m4a`)
-      await downloadStream(audio.attributes.attributes.uri, AUDIO_PATH, connection)
-
-      console.log("Get video...")
+      log("Get video...")
       const VIDEO_PATH = path.join(__dirname, `../../output/${ fileID }.mp4`)
-      await downloadStream(video.properties.uri, VIDEO_PATH, connection)
+      await downloadStream(log, video.properties.uri, VIDEO_PATH, encryption, connection)
 
-      resolve({
-        audio: AUDIO_PATH,
-        video: VIDEO_PATH
-      })
+      if (audio) {
+        log("Get audio...")
+        const AUDIO_PATH = path.join(__dirname, `../../output/${ fileID }.m4a`)
+        await downloadStream(log, audio.attributes.attributes.uri, AUDIO_PATH, encryption, connection)
+
+        resolve({
+          audio: AUDIO_PATH,
+          video: VIDEO_PATH
+        })
+      }
+      else {
+        log("Audio not separate...")
+        resolve(VIDEO_PATH)
+      }
     })
   })
 

@@ -1,4 +1,4 @@
-import { M3U8 } from "codecs/m3u8.codec";
+import { M3U8, VideoEncryption } from "codecs/m3u8.codec";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
 import { Platform } from "platform.types";
@@ -16,16 +16,16 @@ export const TenPlay: Platform = {
   name: "Ten Play",
   needsProxy: true,
   
-  async downloadEpisode(fileID, episode, connection) {
-    console.log("Get video details...")
+  async downloadEpisode(log, fileID, episode, connection) {
+    log("Get video details...")
     const { body: videoBody } = await connection.get(`https://edge.api.brightcove.com/playback/v1/accounts/2199827728001/videos/${ episode.id }`, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
     
     const video = JSON.parse(videoBody)
     const source: string = video.sources[0].src
-    return M3U8.downloadPlaylist(fileID, source, connection)
+    return M3U8.downloadPlaylist(log, fileID, source, connection, VideoEncryption.renditionKey, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
   },
 
-  async checkShow(show) {
+  async checkShow(log, show) {
     const page = await fetch(`https://10play.com.au/${ show.checkPath }`).then(response => response.text())
     const pageData = page.match(/<script>const\s+showPageData\s*=\s*(\{.+\})\;<\/script>/)
     if (!pageData) {

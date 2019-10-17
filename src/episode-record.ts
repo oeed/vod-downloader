@@ -23,8 +23,13 @@ export const isEpisodeLoaded = (episode: Episode) => {
 }
 
 export const saveEpisode = (episode: Episode) => {
-  const { show: { id: showID } } = episode
-  existingEpisodes[showID] = existingEpisodes[showID] || {}
+  const { show: { id: showID, mostRecentOnly } } = episode
+  if (mostRecentOnly) {
+    existingEpisodes[showID] = {}
+  }
+  else {
+    existingEpisodes[showID] = existingEpisodes[showID] || {}
+  }
   existingEpisodes[showID][episode.id] = true
   fs.writeFileSync(EPISODES_PATH, JSON.stringify(existingEpisodes))
 }

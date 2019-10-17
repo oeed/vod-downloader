@@ -1,6 +1,7 @@
 import { loadSaved } from "episode-record";
 import * as fs from 'fs';
 import { registerPlatforms } from "platform.types";
+import { SBS } from "platforms/sbs.platform";
 import { TenPlay } from "platforms/ten-play.platform";
 import { checkAllShows, loadShows } from "show-check";
 import { stopProxy } from "./proxy";
@@ -15,10 +16,15 @@ if (!fs.existsSync(process.env.MEDIA_PATH!)) {
 loadSaved()
 loadShows()
 registerPlatforms([
-  TenPlay
+  TenPlay,
+  SBS
 ])
 
-checkAllShows().then(() => stopProxy()).catch(error => {
+checkAllShows().then(() => {
+  console.log("Complete!")
+  stopProxy()
+  process.exit()
+}).catch(error => {
   stopProxy()
   throw error
 })

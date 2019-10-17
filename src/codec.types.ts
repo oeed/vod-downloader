@@ -1,4 +1,7 @@
+import { VideoEncryption } from "codecs/m3u8.codec";
+import { IncomingHttpHeaders } from "http";
 import { Connection } from "proxy";
+import { Logger } from "show-check";
 
 export interface SplitStreamResult {
   video: string
@@ -7,8 +10,10 @@ export interface SplitStreamResult {
 
 export type CodecResult = string | SplitStreamResult
 
+export type CodecHeaders = IncomingHttpHeaders & { [index: string]: string }
+
 export interface Codec {
 
-  downloadPlaylist: (fileID: string, platlistURL: string, connection: Connection) => Promise<CodecResult>
+  downloadPlaylist: (log: Logger, fileID: string, platlistURL: string, connection: Connection, encryption?: VideoEncryption, headers?: CodecHeaders) => Promise<CodecResult>
 
 }

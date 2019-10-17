@@ -6,7 +6,7 @@ import * as path from "path"
 import SocksProxyAgent from 'socks-proxy-agent'
 import { parse as parseURL } from 'url'
 
-export type GetFunction = (url: string, headers: { [key: string]: string | number }) => Promise<GetResult>
+export type GetFunction = (url: string, headers?: { [key: string]: string | number }) => Promise<GetResult>
 export interface GetResult {
   response: ServerResponse
   body: any
@@ -34,7 +34,7 @@ const createConnection = () => new Promise<ProxyConnection>((resolve, reject) =>
 
   const onData = (data: string) => {
     if (!hasResolved) {
-      console.log("Proxy:", data)
+      console.log("[Proxy]:", data)
     }
     if (!hasResolved && data.indexOf("Local forwarding listening on 127.0.0.1 port 2001") !== -1) {
       console.log("Proxy connected")
@@ -53,7 +53,7 @@ const createConnection = () => new Promise<ProxyConnection>((resolve, reject) =>
         }
       }
 
-      const get: GetFunction = (url: string, headers: { [key: string]: string | number }) => new Promise<GetResult>((resolve, reject) => {
+      const get: GetFunction = (url: string, headers: { [key: string]: string | number } = {}) => new Promise<GetResult>((resolve, reject) => {
         miniget(url, Object.assign({ headers }, options), (err: Error | undefined, response: ServerResponse, body: any) => {
           if (err) {
             reject(err)
@@ -87,6 +87,7 @@ const createConnection = () => new Promise<ProxyConnection>((resolve, reject) =>
 
 export const stopProxy = () => {
   if (proxyConnection) {
+    console.log("Stopping proxy...")
     proxyConnection.proxyProcess.kill()
     proxyConnection = undefined
     isConnected = false
@@ -116,7 +117,7 @@ export const localConnection = (): Connection => {
     }
   }
 
-  const get: GetFunction = (url: string, headers: { [key: string]: string | number }) => new Promise<GetResult>((resolve, reject) => {
+  const get: GetFunction = (url: string, headers: { [key: string]: string | number } = {}) => new Promise<GetResult>((resolve, reject) => {
     miniget(url, Object.assign({ headers }, options), (err: Error | undefined, response: ServerResponse, body: any) => {
       if (err) {
         reject(err)

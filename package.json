@@ -8,6 +8,8 @@
     "@types/mv": "^2.1.0",
     "@types/node": "^12.11.1",
     "@types/node-fetch": "^2.5.2",
+    "@types/tiny-async-pool": "^1.0.0",
+    "@types/xml2js": "^0.4.5",
     "install": "^0.13.0",
     "luxon": "^1.19.3",
     "m3u8": "0.0.8",
@@ -17,9 +19,11 @@
     "node-fetch": "^2.6.0",
     "socks-proxy-agent": "^4.0.2",
     "string-to-stream": "^3.0.1",
+    "tiny-async-pool": "^1.0.4",
     "ts-node": "^8.4.1",
     "tsconfig-paths": "^3.9.0",
-    "typescript": "^3.6.4"
+    "typescript": "^3.6.4",
+    "xml2js": "^0.4.22"
   },
   "devDependencies": {},
   "scripts": {

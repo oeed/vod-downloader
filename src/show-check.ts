@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from "path";
 import { getPlatform } from "platform.types";
 import { ordinalityDescription, Show } from "shows.types";
+import asyncPool from "tiny-async-pool";
 
 console.log(__dirname)
 
@@ -17,24 +18,25 @@ export const loadShows = () => {
   shows = JSON.parse(fs.readFileSync(SHOWS_PATH, "utf-8"))
 }
 
+export type Logger = ReturnType<typeof getLogger>
+const getLogger = (show: Show) => (message: string) => console.log(`[${ show.id }]: ${ message }`) 
+
 const checkShow = async (show: Show) => {
-  console.log(`Checking show: ${ show.name }`)
+  const log = getLogger(show)
+  log(`Checking show: ${ show.name }`)
   const platform = getPlatform(show.platformID)
-  const latestEpisode = await platform.checkShow(show)
+  const latestEpisode = await platform.checkShow(log, show)
   if (!isEpisodeLoaded(latestEpisode)) {
-    console.log(`New episode: ${ ordinalityDescription(latestEpisode.ordinality) }`)
-    await downloadEpisode(latestEpisode)
+    log(`New episode: ${ ordinalityDescription(latestEpisode.ordinality) }`)
+    await downloadEpisode(log, latestEpisode)
     saveEpisode(latestEpisode)
-    console.log(`Episode complete: ${ show.name }`)
+    log(`Episode complete: ${ show.name }`)
   }
   else {
-    console.log(`No new episode.`)
+    log(`No new episode.`)
   }
 }
 
-export const checkAllShows = async () => {
-  for (const show of shows) {
-    await checkShow(show)
-  }
-  console.log("All shows complete")
-}
+const MAX_CONCURRENT_SHOWS = 1
+
+export const checkAllShows = () => asyncPool(MAX_CONCURRENT_SHOWS, shows, checkShow)
