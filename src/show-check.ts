@@ -37,6 +37,6 @@ const checkShow = async (show: Show) => {
   }
 }
 
-const MAX_CONCURRENT_SHOWS = 1
+const MAX_CONCURRENT_SHOWS = 2
 
 export const checkAllShows = () => asyncPool(MAX_CONCURRENT_SHOWS, shows, checkShow)

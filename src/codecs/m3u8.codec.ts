@@ -60,7 +60,7 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
     chunks = []
     file.write(content)
 
-    ;(stream as any).end()
+    // ;(stream as any).end()
   })
   stream.on("end", () => {
     file.end()
