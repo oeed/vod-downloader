@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import { registerPlatforms } from "platform.types";
 import { SBS } from "platforms/sbs.platform";
 import { TenPlay } from "platforms/ten-play.platform";
+import { ThreeNow } from "platforms/three-now.platform";
 import { checkAllShows, loadShows } from "show-check";
 import { stopProxy } from "./proxy";
 
@@ -17,6 +18,7 @@ loadSaved()
 loadShows()
 registerPlatforms([
   TenPlay,
+  ThreeNow,
   SBS
 ])
 
