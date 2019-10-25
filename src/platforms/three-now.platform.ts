@@ -1,9 +1,8 @@
 import { M3U8 } from "codecs/m3u8.codec";
-import RenditionEncryption from "encryptions/rendition.encryption";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
 import { Platform } from "platform.types";
-import { Episode, EpisodeOrdinality, OrdinalityType } from "shows.types";
+import { Episode, EpisodeOrdinality } from "shows.types";
 
 const privateKey = "BCpkADawqM2-Pw-g3-psbmh7mEsKhBVp1QRsKxK5tBOpF72ud6VrAndDsRbs2jlmlgSRJiPdNjJOJESytpUUmyb-Muz41HVYcPcoEdG2E8xmHgcwy7frHjTwbJqTXo2Sxmhjgw2Nynprcv7c"
 const privateKeyHeader = { "Accept": `application/json;pk=${ privateKey }` }
@@ -54,50 +53,26 @@ export const ThreeNow: Platform = {
   
   async downloadEpisode(log, fileID, episode, connection) {
     log("Get video details...")
-    const { body: videoBody } = await connection.get(`https://edge.api.brightcove.com/playback/v1/accounts/2199827728001/videos/${ episode.id }`, { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
-    
-    const video = JSON.parse(videoBody)
-    const source: string = video.sources[0].src
-    return M3U8.downloadPlaylist(log, fileID, source, connection, new RenditionEncryption(), { "Accept": "application/json;pk=BCpkADawqM3LrTsmy4tDkB6PwE5QiKnkQF0gsdyOVDmJNyCmpHG8FbEekN-V2-y5KmH5nyVJ-8HVv9rMX37nUed-zfUhOFiHwA3XhW35sjvr_qk92T8f2dbdA9vLN-wzvdaChZeUqcj3wQOf" })
+    const videoInfo: VideoInformation = await fetch(`https://edge.api.brightcove.com/playback/v1/accounts/3812193411001/videos/${ episode.id }?ad_config_id=e2a40fe3-0513-4e64-b398-44518ae61937`, { headers: privateKeyHeader }).then(r => r.json())
+
+    const source: string = videoInfo.sources[0].src
+    return M3U8.downloadPlaylist(log, fileID, source, connection, undefined, privateKeyHeader)
   },
 
   async checkShow(log, show) {
-    const episodeInfo: EpisodeInformation = await fetch(`https://now-api4-prod.mediaworks.nz/v4/shows/${ show.checkPath }`).then(r => r.json())
+    const episodes: EpisodeInformation = await fetch(`https://now-api4-prod.mediaworks.nz/v4/shows/${ show.checkPath }`).then(r => r.json())
+    const episodeInfo = episodes.show.episodes[0]
     
-    const episodeID = episodeInfo.show.episodes[0].externalMediaId
+    const episodeID = episodeInfo.externalMediaId
+    const date = DateTime.fromISO(episodeInfo.airedDate)
 
-    const videoInfo: VideoInformation = await fetch(`https://edge.api.brightcove.com/playback/v1/accounts/3812193411001/videos/${  }?ad_config_id=e2a40fe3-0513-4e64-b398-44518ae61937`, { headers: privateKeyHeader })
-
-
-    const page = await fetch(`https://10play.com.au/${ show.checkPath }`).then(response => response.text())
-    const pageData = page.match(/<script>const\s+showPageData\s*=\s*(\{.+\})\;<\/script>/)
-    if (!pageData) {
-      throw new Error(`Could not parse page: ${ show.checkPath }`)
-    }
-    const video: VideoInformation = JSON.parse(pageData[1]).video
-
-    const titleMatch = video.title.match(/S.*?(\d+) E.*?(\d+)/)
-    if (!titleMatch) {
-      throw new Error(`Could not match title '${ video.title }' for ${ show.id }`)
-    }
-    let ordinality: EpisodeOrdinality
-    const [_, seasonNo, episodeNo] = titleMatch
-    if (show.ordinality === OrdinalityType.numerical) {
-      ordinality = {
-        season: parseInt(seasonNo),
-        episode: parseInt(episodeNo)
-      }
-    }
-    else {
-      ordinality = {
-        season: parseInt(seasonNo),
-        airDate: DateTime.fromISO(video.airDate)
-      }
+    let ordinality: EpisodeOrdinality = {
+      airDate: date
     }
 
     const episode: Episode = {
-      id: video.videoId,
-      show: show,
+      id: episodeID,
+      show,
       platform: this,
       ordinality
     }

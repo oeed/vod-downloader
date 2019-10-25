@@ -39,7 +39,9 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
     chunks = []
     file.write(content)
 
-    ;(stream as any).end()
+    if (process.env.NODE_ENV === "development") {
+      ;(stream as any).end()
+    }
   })
   stream.on("end", () => {
     file.end()

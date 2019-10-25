@@ -13,6 +13,7 @@
       "cwd": "${workspaceRoot}",
       "runtimeArgs": ["-r", "ts-node/register", "-r", "tsconfig-paths/register"],
       "env": {
+        "NODE_ENV": "development",
         "TS_NODE_FILES": "true",
         "MEDIA_PATH": "/Users/olivercooper/Documents/Projects/vod-downloader/test-media/"
       }
