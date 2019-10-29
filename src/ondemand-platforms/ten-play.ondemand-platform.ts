@@ -2,8 +2,8 @@ import { M3U8 } from "codecs/m3u8.codec";
 import RenditionEncryption from "encryptions/rendition.encryption";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
-import { Platform } from "platform.types";
-import { Episode, EpisodeOrdinality, OrdinalityType } from "shows.types";
+import { OnDemandPlatform } from "platform.types";
+import { Episode, EpisodeOrdinality, OrdinalityType } from "shows.helper";
 
 interface VideoInformation {
   title: string
@@ -11,7 +11,7 @@ interface VideoInformation {
   airDate: string
 }
 
-export const TenPlay: Platform = {
+export const TenPlay: OnDemandPlatform = {
 
   id: "tenplay",
   name: "Ten Play",
@@ -34,26 +34,33 @@ export const TenPlay: Platform = {
     }
     const video: VideoInformation = JSON.parse(pageData[1]).video
 
-    const titleMatch = video.title.match(/S.*?(\d+) E.*?(\d+)/)
-    if (!titleMatch) {
-      throw new Error(`Could not match title '${ video.title }' for ${ show.id }`)
-    }
     let ordinality: EpisodeOrdinality
-    const [_, seasonNo, episodeNo] = titleMatch
-    if (show.ordinality === OrdinalityType.numerical) {
+    if (show.ordinality === OrdinalityType.date) {
       ordinality = {
-        season: parseInt(seasonNo),
-        episode: parseInt(episodeNo)
-      }
+        airDate: DateTime.fromISO(video.airDate)
+      }      
     }
     else {
-      ordinality = {
-        season: parseInt(seasonNo),
-        airDate: DateTime.fromISO(video.airDate)
+      const titleMatch = video.title.match(/S.*?(\d+) E.*?(\d+)/)
+      if (!titleMatch) {
+        throw new Error(`Could not match title '${ video.title }' for ${ show.id }`)
+      }
+      const [_, seasonNo, episodeNo] = titleMatch
+      if (show.ordinality === OrdinalityType.numerical) {
+        ordinality = {
+          season: parseInt(seasonNo),
+          episode: parseInt(episodeNo)
+        }
+      }
+      else {
+        ordinality = {
+          season: parseInt(seasonNo),
+          airDate: DateTime.fromISO(video.airDate)
+        }
       }
     }
 
-    const episode: Episode = {
+    const episode: Episode<OnDemandPlatform> = {
       id: video.videoId,
       show: show,
       platform: this,

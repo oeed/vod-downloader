@@ -1,10 +1,12 @@
 import { loadSaved } from "episode-record";
 import * as fs from 'fs';
+import { checkAllLiveShows } from "live-check";
+import { Freeview } from "live-platforms/freeview.live-platform";
+import { SBS } from "ondemand-platforms/sbs.ondemand-platform";
+import { TenPlay } from "ondemand-platforms/ten-play.ondemand-platform";
+import { ThreeNow } from "ondemand-platforms/three-now.ondemand-platform";
 import { registerPlatforms } from "platform.types";
-import { SBS } from "platforms/sbs.platform";
-import { TenPlay } from "platforms/ten-play.platform";
-import { ThreeNow } from "platforms/three-now.platform";
-import { checkAllShows, loadShows } from "show-check";
+import { loadShows } from "shows.helper";
 import { stopProxy } from "./proxy";
 
 process.on('exit', () => stopProxy())
@@ -14,19 +16,24 @@ if (!fs.existsSync(process.env.MEDIA_PATH!)) {
   throw new Error("Media path not mounted!")
 }
 
-loadSaved()
-loadShows()
 registerPlatforms([
   TenPlay,
   ThreeNow,
+  Freeview,
   SBS
 ])
+loadSaved()
+loadShows()
 
-checkAllShows().then(() => {
-  console.log("Complete!")
-  stopProxy()
-  process.exit()
-}).catch(error => {
-  stopProxy()
-  throw error
-})
+/* setInterval(() => {
+  checkOnDemandAllShows().then(() => {
+    console.log("Complete!")
+    stopProxy()
+    process.exit()
+  }).catch(error => {
+    stopProxy()
+    throw error
+  })
+}, 15 * 60 * 1000) */
+
+checkAllLiveShows()

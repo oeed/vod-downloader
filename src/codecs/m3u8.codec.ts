@@ -1,11 +1,13 @@
-import { Codec, CodecHeaders } from "codec.types";
+import { Codec, CodecHeaders, StreamingCodec } from "codec.types";
 import EncryptionMethod from "encryption";
+import Ffmpeg from "fluent-ffmpeg";
 import * as fs from 'fs';
+import { Logger } from "log.helper";
+import { DateTime } from "luxon";
 import * as m3u8 from 'm3u8';
 import m3u8stream from 'm3u8stream';
 import * as path from "path";
 import { Connection } from "proxy";
-import { Logger } from "show-check";
 import stringStream from 'string-to-stream';
 
 const downloadStream = (log: Logger, url: string, fileName: string, encryptionMethod: EncryptionMethod | undefined, connection: Connection) => new Promise(async (resolve, reject) => {
@@ -30,7 +32,7 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
     let content: Buffer
     log(`${ fileName }: Segment done: ${ data.num }`)
     if (encryptionMethod) {
-      content = await encryptionMethod.decryptSegment(Buffer.concat(chunks))
+      content = await encryptionMethod.decryptSegment(Buffer.concat(chunks), data.num - 1)
       
     }
     else {
@@ -49,7 +51,7 @@ const downloadStream = (log: Logger, url: string, fileName: string, encryptionMe
   })
 })
 
-export const M3U8: Codec = {
+export const M3U8: Codec & StreamingCodec = {
 
   downloadPlaylist: (log: Logger, fileID: string, platlistURL: string, connection: Connection, encryption?: EncryptionMethod, headers: CodecHeaders = {}) => new Promise(async resolve => {
     const { body: manifest} = await connection.get(platlistURL, headers)
@@ -97,6 +99,43 @@ export const M3U8: Codec = {
         resolve(VIDEO_PATH)
       }
     })
+  }),
+
+  recordPlaylist: (log: Logger, fileID: string, playlistURL: string, startTime: DateTime, endTime: DateTime, connection: Connection, headers: CodecHeaders = {}) => new Promise(async (resolve, reject) => {
+    const VIDEO_PATH = path.join(__dirname, `../../output/${ fileID }.mp4`)
+
+    let isComplete = false
+    const ffmpeg = Ffmpeg(playlistURL)
+                    .withAudioCodec("copy")
+                    .withVideoCodec("copy")
+                    .on('error', function(err) {
+                      log('[ffmpeg]: Error: ' + err.message);
+                    })
+                    .on('stderr', (stderrLine: string) => {
+                      log('[ffmpeg]: ' + stderrLine);
+                      if (stderrLine.indexOf("Exiting normally") !== -1) {
+                        if (!isComplete) {
+                          log("Record complete!")
+                          isComplete = true
+                          resolve(VIDEO_PATH)
+                        }
+                      }
+                    })
+                    .on('end', function() {
+                      log('Finished processing')
+                      if (!isComplete) {
+                        isComplete = true
+                        resolve(VIDEO_PATH)
+                      }
+                    })
+                    .save(VIDEO_PATH)
+                    
+    const duration = endTime.diff(startTime)
+    log(`Record duration: ${ duration.toISO() }`)
+    setTimeout(() => {
+      log(`Stopping at ${ DateTime.local() }`)
+      ffmpeg.kill("SIGTERM")
+    }, duration.milliseconds)
   })
 
 }

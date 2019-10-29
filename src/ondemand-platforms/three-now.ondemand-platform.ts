@@ -1,8 +1,8 @@
 import { M3U8 } from "codecs/m3u8.codec";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
-import { Platform } from "platform.types";
-import { Episode, EpisodeOrdinality } from "shows.types";
+import { OnDemandPlatform } from "platform.types";
+import { Episode, EpisodeOrdinality } from "shows.helper";
 
 const privateKey = "BCpkADawqM2-Pw-g3-psbmh7mEsKhBVp1QRsKxK5tBOpF72ud6VrAndDsRbs2jlmlgSRJiPdNjJOJESytpUUmyb-Muz41HVYcPcoEdG2E8xmHgcwy7frHjTwbJqTXo2Sxmhjgw2Nynprcv7c"
 const privateKeyHeader = { "Accept": `application/json;pk=${ privateKey }` }
@@ -45,7 +45,7 @@ interface VideoInformation {
   }[]
 }
 
-export const ThreeNow: Platform = {
+export const ThreeNow: OnDemandPlatform = {
 
   id: "threenow",
   name: "Three Now",
@@ -70,7 +70,7 @@ export const ThreeNow: Platform = {
       airDate: date
     }
 
-    const episode: Episode = {
+    const episode: Episode<OnDemandPlatform> = {
       id: episodeID,
       show,
       platform: this,

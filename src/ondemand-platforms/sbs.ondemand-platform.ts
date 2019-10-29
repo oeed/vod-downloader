@@ -1,9 +1,8 @@
 import { M3U8 } from "codecs/m3u8.codec";
 import { DateTime } from "luxon";
 import fetch from "node-fetch";
-import { Platform } from "platform.types";
-import { Logger } from "show-check";
-import { Episode, EpisodeOrdinality } from "shows.types";
+import { OnDemandPlatform } from "platform.types";
+import { Episode, EpisodeOrdinality } from "shows.helper";
 import { parseStringPromise } from "xml2js";
 
 interface EpisodeInformation {
@@ -44,13 +43,13 @@ interface OptionsInformation {
   }
 }
 
-export const SBS: Platform = {
+export const SBS: OnDemandPlatform = {
 
   id: "sbs",
   name: "SBS",
   needsProxy: true,
   
-  async downloadEpisode(log: Logger, fileID, episode, connection) {
+  async downloadEpisode(log, fileID, episode, connection) {
     log("Get video details...")
     const { body: videoBody } = await connection.get(`https://www.sbs.com.au/api/video_pdkvars/playlist/${ episode.id }`)
     const video: VideoInformation[] = JSON.parse(videoBody)
@@ -73,7 +72,7 @@ export const SBS: Platform = {
     return M3U8.downloadPlaylist(log, fileID, source, connection)
   },
 
-  async checkShow(log: Logger, show) {
+  async checkShow(log, show) {
     const response: EpisodeInformation  = await fetch(`https://www.sbs.com.au/api/video_program?context=web2&id=${ show.checkPath }`).then(response => response.json())
     const info = response.rows[0].feeds[0].data[0]
     const date = DateTime.fromMillis(info.media$availableDate, { zone: "Australia/Sydney" })
@@ -86,7 +85,7 @@ export const SBS: Platform = {
       airDate: date
     }
 
-    const episode: Episode = {
+    const episode: Episode<OnDemandPlatform> = {
       id: idMatch[0],
       show,
       platform: this,

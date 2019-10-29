@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from "path";
-import { Episode } from "./shows.types";
+import { Episode } from "./shows.helper";
 
 interface ExistingEpisodes {
   [showID: string]: {
