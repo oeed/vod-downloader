@@ -16,7 +16,7 @@
     "m3u8stream": "^0.6.2",
     "miniget": "^1.5.3",
     "mv": "^2.1.1",
-    "node-fetch": "^2.6.0",
+    "node-fetch": "^2.6.1",
     "socks-proxy-agent": "^4.0.2",
     "string-to-stream": "^3.0.1",
     "tiny-async-pool": "^1.0.4",
